@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, platform TEXT NOT NULL DEFAULT 'facebook', status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','approved','scheduled','publishing','published','failed')), scheduled_at TEXT, external_id TEXT, error TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_posts_due ON posts(status, scheduled_at);
+CREATE TABLE IF NOT EXISTS brands (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', voice TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS connections (platform TEXT PRIMARY KEY, account_label TEXT NOT NULL, access_token TEXT NOT NULL, account_id TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS publish_logs (id TEXT PRIMARY KEY, post_id TEXT NOT NULL, platform TEXT NOT NULL, outcome TEXT NOT NULL, detail TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);

@@ -1,0 +1,1 @@
+{"name":"dutamarket-v2","private":true,"type":"module","scripts":{"dev":"wrangler dev","deploy":"wrangler deploy","db:local":"wrangler d1 execute dutamarket-db --local --file=./schema.sql","db:remote":"wrangler d1 execute dutamarket-db --remote --file=./schema.sql"},"devDependencies":{"wrangler":"^4.0.0"}}
