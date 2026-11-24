@@ -1,0 +1,48 @@
+name: ReelForge Render Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout ReelForge
+        uses: actions/checkout@v4
+        with:
+          repository: gongnyang/reelforge
+          path: reelforge
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: reelforge
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-core
+          npm ci
+          ./node_modules/.bin/hyperframes doctor
+
+      - name: Render video
+        working-directory: reelforge
+        run: |
+          mkdir -p tmp/dutamarket-smoke
+          cp fixtures/golden-specs/minimal-3scene/scene_specs.json tmp/dutamarket-smoke/
+          node bin/vf pipeline run tmp/dutamarket-smoke --profile mock
+          test -s tmp/dutamarket-smoke/out/main.mp4
+
+      - name: Export MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: DUTAMARKET-Video
+          path: reelforge/tmp/dutamarket-smoke/out/main.mp4
+          if-no-files-found: error
+          retention-days: 3
