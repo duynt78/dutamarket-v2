@@ -1,0 +1,92 @@
+name: DUTAMARKET Vietnamese Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenes:
+        description: 'JSON array of three narration strings'
+        required: true
+        type: string
+      format:
+        type: choice
+        options: ['9:16', '16:9', '1:1']
+        default: '9:16'
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: gongnyang/reelforge
+          path: reelforge
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: reelforge
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-core python3-venv
+          python3 -m venv .venv
+          .venv/bin/pip install edge-tts
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          npm ci
+
+      - name: Prepare Vietnamese scenes
+        working-directory: reelforge
+        env:
+          SCENES: ${{ inputs.scenes }}
+        run: |
+          mkdir -p tmp/dutamarket
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const a = JSON.parse(process.env.SCENES);
+          if (!Array.isArray(a) || a.length !== 3 ||
+              a.some(x => typeof x !== 'string' ||
+              !x.trim() || x.length > 500)) {
+            throw Error('Invalid scenes');
+          }
+          const s = JSON.parse(fs.readFileSync(
+            'fixtures/golden-specs/minimal-3scene/scene_specs.json',
+            'utf8'
+          ));
+          s.projectId = 'dutamarket';
+          s.scenes.forEach((x,i) => {
+            x.narration = a[i];
+            x.narration_tts = a[i];
+            x.altText = a[i];
+            x.headline = a[i].split(/\s+/).slice(0,7).join(' ');
+            x.source = 'dutamarket';
+          });
+          fs.writeFileSync(
+            'tmp/dutamarket/scene_specs.json',
+            JSON.stringify(s)
+          );
+          JS
+
+      - name: Generate speech and render
+        working-directory: reelforge
+        env:
+          FORMAT: ${{ inputs.format }}
+        run: |
+          node bin/vf pipeline run tmp/dutamarket --profile real --until images
+          node bin/vf compile tmp/dutamarket --format "$FORMAT"
+          node bin/vf pipeline run tmp/dutamarket --profile real --only render
+          test -s tmp/dutamarket/out/main.mp4
+
+      - name: Export video
+        uses: actions/upload-artifact@v4
+        with:
+          name: DUTAMARKET-Video
+          path: reelforge/tmp/dutamarket/out/main.mp4
+          if-no-files-found: error
+          retention-days: 3
